@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import Editor from "@monaco-editor/react";
 import {
   Terminal, Play, Upload, Code, BookOpen, MessageSquare, Notebook, Sparkles,
-  ChevronDown, Maximize2, Minimize2, CheckCircle2, XCircle, AlertTriangle, Loader2, Save, Trophy
+  ChevronDown, Maximize2, Minimize2, CheckCircle2, XCircle, AlertTriangle, Loader2, Save, Trophy, ShieldAlert
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
