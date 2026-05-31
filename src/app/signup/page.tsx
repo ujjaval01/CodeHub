@@ -18,6 +18,7 @@ function SignupContent() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
 
   // OTP flow states
   const [step, setStep] = useState<"form" | "otp" | "success">("form");
@@ -41,6 +42,11 @@ function SignupContent() {
       return;
     }
 
+    if (cooldown > 0) {
+      setError(`Please wait ${cooldown} seconds before requesting another OTP.`);
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -59,6 +65,19 @@ function SignupContent() {
         setRegistrationToken(data.registrationToken);
         setMockOtp(data.mockOtp || "");
         setStep("otp");
+        
+        // Start 60s cooldown
+        setCooldown(60);
+        const timer = setInterval(() => {
+          setCooldown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+
       } else {
         setError(data.error || "Failed to initiate registration.");
       }
@@ -236,13 +255,17 @@ function SignupContent() {
 
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || cooldown > 0}
                   className="glow-btn-primary flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white transition-all disabled:opacity-50 mt-2 cursor-pointer"
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin text-white" />
                       <span>Sending OTP...</span>
+                    </>
+                  ) : cooldown > 0 ? (
+                    <>
+                      <span>Wait {cooldown}s to Resend</span>
                     </>
                   ) : (
                     <>

@@ -15,10 +15,12 @@ export default function ForgotPasswordPage() {
   const [resetToken, setResetToken] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
 
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return setError("Please enter your email.");
+    if (cooldown > 0) return setError(`Please wait ${cooldown} seconds before requesting another recovery code.`);
     
     setError("");
     setIsLoading(true);
@@ -32,6 +34,19 @@ export default function ForgotPasswordPage() {
       if (!res.ok) throw new Error(data.error || "Request failed");
       
       setStep("otp");
+      
+      // Start 60s cooldown
+      setCooldown(60);
+      const timer = setInterval(() => {
+        setCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
     } catch (err: any) {
       setError(err.message || "Network error");
     } finally {
@@ -118,8 +133,8 @@ export default function ForgotPasswordPage() {
                   </div>
                 </div>
 
-                <button type="submit" disabled={isLoading} className="glow-btn-primary flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white transition-all disabled:opacity-50">
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <><span>Send Recovery Code</span><ArrowRight className="h-4 w-4" /></>}
+                <button type="submit" disabled={isLoading || cooldown > 0} className="glow-btn-primary flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white transition-all disabled:opacity-50">
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : cooldown > 0 ? <span>Wait {cooldown}s</span> : <><span>Send Recovery Code</span><ArrowRight className="h-4 w-4" /></>}
                 </button>
               </motion.form>
             )}
