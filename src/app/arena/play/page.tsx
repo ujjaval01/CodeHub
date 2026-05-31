@@ -38,8 +38,7 @@ function PlayArenaContent() {
         const res = await fetch("/api/quiz/session", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${localStorage.getItem("token")}`
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({ mode, language: lang })
         });
@@ -92,8 +91,7 @@ function PlayArenaContent() {
       const res = await fetch("/api/quiz/submit", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           sessionId: session,

@@ -31,8 +31,7 @@ export default function ArenaDashboard() {
       const res = await fetch("/api/quiz/generate", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ language: lang, category: topic, difficulty: diff, count: 5 })
       });
