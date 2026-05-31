@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     if (!emailResult.success) {
       console.error(`[Signup Phase 1] Email delivery failed for ${email}:`, emailResult.error);
       
-      const errorMessage = emailResult.error?.message || "Failed to send OTP email. Please try again.";
+      const errorMessage = (emailResult.error as any)?.message || "Failed to send OTP email. Please try again.";
       
       return NextResponse.json({ 
         error: errorMessage, 
