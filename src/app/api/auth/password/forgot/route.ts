@@ -7,7 +7,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 export async function POST(req: NextRequest) {
   try {
     console.log("[Forgot Password Phase 1] Starting OTP generation process...");
-    const ip = req.ip || req.headers.get("x-forwarded-for")?.split(',')[0] || "unknown";
+    const ip = req.headers.get("x-forwarded-for")?.split(',')[0] || "unknown";
     const isAllowed = await checkRateLimit(ip, "forgot_password", 10, 15); // Max 10 requests per 15 mins
     
     if (!isAllowed) {
