@@ -84,7 +84,7 @@ function SignupContent() {
       const res = await fetch("/api/auth/signup/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ registrationToken, userOtp }),
+        body: JSON.stringify({ name, email, password, userOtp }),
       });
 
       const data = await res.json();
