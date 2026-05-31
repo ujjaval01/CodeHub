@@ -7,8 +7,8 @@ import { checkRateLimit } from "@/lib/rateLimit";
 export async function POST(req: NextRequest) {
   try {
     console.log("[Signup Phase 1] Starting OTP generation process...");
-    const ip = req.headers.get("x-forwarded-for") || "unknown";
-    const isAllowed = await checkRateLimit(ip, "signup_otp", 3, 15); // Max 3 requests per 15 minutes
+    const ip = req.ip || req.headers.get("x-forwarded-for")?.split(',')[0] || "unknown";
+    const isAllowed = await checkRateLimit(ip, "signup_otp", 10, 15); // Max 10 requests per 15 minutes for testing
     if (!isAllowed) {
       console.warn(`[Signup Phase 1] Rate limit exceeded for IP: ${ip}`);
       return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
