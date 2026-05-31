@@ -31,6 +31,7 @@ export default function Navbar() {
     { name: "Problems", path: "/problems" },
     { name: "Contests", path: "/contests" },
     { name: "Leaderboard", path: "/leaderboard" },
+    ...(user ? [{ name: "Quiz Arena", path: "/arena" }] : []),
   ];
 
   const getRankTier = (xp: number) => {
