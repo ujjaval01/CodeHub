@@ -21,6 +21,7 @@ model User {
   lastActive   DateTime     @default(now())
   createdAt              DateTime     @default(now())
   updatedAt              DateTime     @updatedAt
+  emailVerified          DateTime?
   isPremium              Boolean      @default(false)
   razorpayCustomerId     String?
   razorpaySubscriptionId String?
@@ -225,4 +226,33 @@ model Friendship {
   createdAt DateTime @default(now())
 
   @@unique([userId, friendId])
+}
+
+// -----------------------------------------
+// Authentication & Security Models
+// -----------------------------------------
+
+model EmailOTP {
+  id        String   @id @default(cuid())
+  email     String
+  otpHash   String
+  purpose   String   // signup, forgot_password
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+model RateLimit {
+  id        String   @id @default(cuid())
+  ip        String
+  action    String   // signup_otp, forgot_password_otp, login
+  count     Int      @default(1)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([ip, action])
+  @@index([expiresAt])
 }

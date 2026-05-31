@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.JWT_SECRET || "codehub_jwt_secret_cyber_security_key";
+import { sendOTPEmail } from "@/lib/email";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    const isAllowed = await checkRateLimit(ip, "signup_otp", 3, 15); // Max 3 requests per 15 minutes
+    if (!isAllowed) {
+      return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+    }
+
     const { name, email, password } = await req.json();
 
     if (!name || !email || !password) {
@@ -28,35 +33,35 @@ export async function POST(req: NextRequest) {
 
     // Generate random 6-digit OTP
     const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = await bcrypt.hash(generatedOtp, 10);
 
-    // Print to the server terminal clearly for development
-    console.log("\n=======================================================");
-    console.log(`🔑 CODEHUB SIGNUP VERIFICATION CODE FOR ${email.toUpperCase()}:`);
-    console.log(`👉 OTP CODE: ${generatedOtp}`);
-    console.log("=======================================================\n");
+    // Expire any existing OTPs for this email/purpose
+    await prisma.emailOTP.deleteMany({
+      where: { email, purpose: "signup" }
+    });
 
-    // Hash the password now so we don't have to do it in step 2 (saves response latency)
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    // Sign registration details + generated OTP into temporary JWT token (expiring in 10 minutes)
-    const registrationToken = jwt.sign(
-      {
-        name,
+    // Store OTP in database
+    await prisma.emailOTP.create({
+      data: {
         email,
-        passwordHash,
-        otp: generatedOtp,
-      },
-      JWT_SECRET,
-      { expiresIn: "10m" }
-    );
+        otpHash,
+        purpose: "signup",
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+      }
+    });
+
+    // Send Email
+    const emailResult = await sendOTPEmail(email, generatedOtp, "signup");
+    if (!emailResult.success) {
+      return NextResponse.json({ error: "Failed to send OTP email. Please try again." }, { status: 500 });
+    }
 
     return NextResponse.json({
-      message: "Verification code sent. Check server logs or copy below.",
-      registrationToken,
-      mockOtp: generatedOtp, // Development aid
+      message: "Verification code sent to email.",
+      email: email,
     });
   } catch (e: any) {
     console.error("Signup OTP generation error:", e);
-    return NextResponse.json({ error: "Internal server error during registration verification" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error during registration" }, { status: 500 });
   }
 }

@@ -20,7 +20,7 @@ function SignupContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // OTP flow states
-  const [step, setStep] = useState<"form" | "otp">("form");
+  const [step, setStep] = useState<"form" | "otp" | "success">("form");
   const [registrationToken, setRegistrationToken] = useState("");
   const [userOtp, setUserOtp] = useState("");
   const [mockOtp, setMockOtp] = useState("");
@@ -89,10 +89,13 @@ function SignupContent() {
 
       const data = await res.json();
       if (res.ok) {
+        setStep("success");
         // Authenticate context globally
         await refreshUser();
-        // Redirect to dashboard
-        router.push("/dashboard");
+        // Redirect to dashboard after delay
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 2000);
       } else {
         setError(data.error || "OTP verification failed.");
       }
@@ -120,12 +123,12 @@ function SignupContent() {
             </div>
           </div>
           <h2 className="text-3xl font-extrabold tracking-tight text-white">
-            {step === "form" ? "Create Account" : "Verify Email"}
+            {step === "form" ? "Create Account" : step === "otp" ? "Verify Email" : "Account Created"}
           </h2>
           <p className="text-sm text-zinc-400">
             {step === "form" 
               ? "Join CodeHub and start solving DSA problems today"
-              : `Enter the 6-digit OTP code sent to ${email}`}
+              : step === "otp" ? `Enter the 6-digit OTP code sent to ${email}` : "You are now being redirected to the dashboard..."}
           </p>
         </div>
 
@@ -249,7 +252,7 @@ function SignupContent() {
                   )}
                 </button>
               </motion.form>
-            ) : (
+            ) : step === "otp" ? (
               <motion.form
                 key="otp-form"
                 initial={{ opacity: 0, x: 20 }}
@@ -333,6 +336,26 @@ function SignupContent() {
                   </div>
                 )}
               </motion.form>
+            ) : (
+              <motion.div
+                key="success"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex flex-col items-center justify-center py-8 text-center space-y-4"
+              >
+                <motion.div 
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                  className="h-20 w-20 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.2)]"
+                >
+                  <CheckCircle className="h-10 w-10 text-emerald-400" />
+                </motion.div>
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-2">Registration Complete!</h3>
+                  <p className="text-sm text-zinc-400">Loading your dashboard profile...</p>
+                </div>
+              </motion.div>
             )}
           </AnimatePresence>
         </div>

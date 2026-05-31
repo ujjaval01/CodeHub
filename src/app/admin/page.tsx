@@ -214,6 +214,22 @@ function AdminContent() {
     }
   };
 
+  // Force Verify User
+  const handleForceVerify = async (id: string) => {
+    if (!confirm("Force verify this user's email?")) return;
+    try {
+      const res = await fetch(`/api/admin/users/${id}/verify`, { method: "POST" });
+      if (res.ok) {
+        fetchAdminData();
+      } else {
+        const json = await res.json();
+        alert(json.error || "Failed to verify user.");
+      }
+    } catch (e) {
+      alert("Network error verifying user.");
+    }
+  };
+
   // Delete User
   const handleDeleteUser = async (id: string) => {
     if (!confirm("Are you sure you want to permanently delete this user?")) return;
@@ -617,14 +633,32 @@ function AdminContent() {
                 </div>
                 <p className="text-zinc-500 font-mono text-[10px] truncate">{u.email}</p>
                 <div className="flex justify-between items-center pt-1 border-t border-white/2">
-                  <span className="font-mono text-[10px] text-zinc-400">Level {u.level} ({u.xp} XP)</span>
-                  <button
-                    onClick={() => handleDeleteUser(u.id)}
-                    className="text-red-400 hover:text-red-300 p-1 rounded hover:bg-red-500/10 transition-colors"
-                    title="Delete User"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  <span className="font-mono text-[10px] text-zinc-400 flex items-center gap-2">
+                    Level {u.level}
+                    {u.emailVerified ? (
+                      <span className="text-emerald-400 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Verified</span>
+                    ) : (
+                      <span className="text-amber-400 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Unverified</span>
+                    )}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {!u.emailVerified && (
+                      <button
+                        onClick={() => handleForceVerify(u.id)}
+                        className="text-amber-400 hover:text-amber-300 p-1 rounded hover:bg-amber-500/10 transition-colors"
+                        title="Force Verify Email"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteUser(u.id)}
+                      className="text-red-400 hover:text-red-300 p-1 rounded hover:bg-red-500/10 transition-colors"
+                      title="Delete User"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

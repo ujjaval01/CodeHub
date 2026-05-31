@@ -3,11 +3,18 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const JWT_SECRET = process.env.JWT_SECRET || "codehub_jwt_secret_cyber_security_key";
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    const isAllowed = await checkRateLimit(ip, "login", 5, 15); // 5 failed attempts per 15 min
+    if (!isAllowed) {
+      return NextResponse.json({ error: "Too many failed login attempts. Please try again later." }, { status: 429 });
+    }
+
     const { email, password } = await req.json();
 
     if (!email || !password) {
@@ -27,6 +34,10 @@ export async function POST(req: NextRequest) {
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+
+    if (!user.emailVerified) {
+      return NextResponse.json({ error: "Please verify your email before logging in. If you signed up before email verification was required, please contact support." }, { status: 403 });
     }
 
     // Update lastActive and streak if needed
