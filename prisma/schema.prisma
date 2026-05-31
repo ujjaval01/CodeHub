@@ -27,6 +27,14 @@ model User {
   submissions            Submission[]
   discussions            Discussion[]
   notes                  Note[]
+  
+  // Quiz Arena Relations
+  quizAttempts           QuizAttempt[]
+  quizSessions           QuizSession[]
+  quizStats              UserQuizStat?
+  badges                 UserBadge[]
+  friendships            Friendship[]  @relation("UserFriendships")
+  friendOf               Friendship[]  @relation("FriendOfUser")
 }
 
 model Problem {
@@ -126,4 +134,95 @@ model Note {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, problemId])
+}
+
+// -----------------------------------------
+// Quiz Arena Models
+// -----------------------------------------
+
+model QuizQuestion {
+  id            String        @id @default(cuid())
+  language      String
+  category      String
+  difficulty    String
+  question      String
+  optionsJson   String        // JSON array of strings
+  correctAnswer Int           // Index of the correct option
+  explanation   String?
+  xpReward      Int           @default(10)
+  createdAt     DateTime      @default(now())
+  attempts      QuizAttempt[]
+}
+
+model QuizAttempt {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId     String
+  question       QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  sessionId      String?
+  session        QuizSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  selectedAnswer Int
+  isCorrect      Boolean
+  timeTaken      Int          // in milliseconds
+  createdAt      DateTime     @default(now())
+}
+
+model QuizSession {
+  id         String        @id @default(cuid())
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mode       String        // Quick, Topic, Survival, SpeedRun, Daily, 1v1
+  score      Int           @default(0)
+  accuracy   Float         @default(0.0)
+  xpEarned   Int           @default(0)
+  completedAt DateTime?
+  createdAt  DateTime      @default(now())
+  attempts   QuizAttempt[]
+}
+
+model UserQuizStat {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalPlayed   Int      @default(0)
+  totalCorrect  Int      @default(0)
+  totalWrong    Int      @default(0)
+  accuracy      Float    @default(0.0)
+  currentStreak Int      @default(0)
+  longestStreak Int      @default(0)
+  totalXP       Int      @default(0)
+  level         Int      @default(1)
+  rank          String   @default("Rookie")
+  updatedAt     DateTime @updatedAt
+}
+
+model UserBadge {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId    String   // Can point to existing Badge model or be string key
+  unlockedAt DateTime @default(now())
+
+  @@unique([userId, badgeId])
+}
+
+model DailyChallenge {
+  id            String   @id @default(cuid())
+  date          DateTime @unique
+  challengeJson String   // JSON of daily questions
+  rewardsJson   String   // JSON of XP/coins
+  createdAt     DateTime @default(now())
+}
+
+model Friendship {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
+  friendId  String
+  friend    User     @relation("FriendOfUser", fields: [friendId], references: [id], onDelete: Cascade)
+  status    String   @default("ACCEPTED") // PENDING, ACCEPTED
+  createdAt DateTime @default(now())
+
+  @@unique([userId, friendId])
 }
