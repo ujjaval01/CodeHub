@@ -58,8 +58,11 @@ export async function POST(req: NextRequest) {
     
     if (!emailResult.success) {
       console.error(`[Forgot Password Phase 1] Email delivery failed for ${email}:`, emailResult.error);
+      
+      const errorMessage = emailResult.error?.message || "Failed to send recovery email. Please try again.";
+
       return NextResponse.json({ 
-        error: "Failed to send recovery email. Please try again.",
+        error: errorMessage,
         details: emailResult.error 
       }, { status: 500 });
     }
