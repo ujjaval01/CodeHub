@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, XCircle, Timer, Award, Loader2, ArrowRight } from "lucide-react";
@@ -12,7 +12,7 @@ interface Question {
   options: string[];
 }
 
-export default function PlayArena() {
+function PlayArenaContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const mode = searchParams.get("mode") || "Quick";
@@ -278,5 +278,13 @@ export default function PlayArena() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function PlayArena() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-violet-500" /></div>}>
+      <PlayArenaContent />
+    </Suspense>
   );
 }
