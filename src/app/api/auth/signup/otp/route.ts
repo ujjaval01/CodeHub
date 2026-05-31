@@ -6,15 +6,19 @@ import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
+    console.log("[Signup Phase 1] Starting OTP generation process...");
     const ip = req.headers.get("x-forwarded-for") || "unknown";
     const isAllowed = await checkRateLimit(ip, "signup_otp", 3, 15); // Max 3 requests per 15 minutes
     if (!isAllowed) {
+      console.warn(`[Signup Phase 1] Rate limit exceeded for IP: ${ip}`);
       return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
     }
 
     const { name, email, password } = await req.json();
+    console.log(`[Signup Phase 1] Received request for email: ${email}`);
 
     if (!name || !email || !password) {
+      console.warn("[Signup Phase 1] Missing required fields");
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -28,10 +32,12 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingUser) {
+      console.warn(`[Signup Phase 1] User already exists: ${email}`);
       return NextResponse.json({ error: "User already exists with this email" }, { status: 409 });
     }
 
     // Generate random 6-digit OTP
+    console.log(`[Signup Phase 1] Generating OTP for ${email}...`);
     const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpHash = await bcrypt.hash(generatedOtp, 10);
 
@@ -41,6 +47,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Store OTP in database
+    console.log(`[Signup Phase 1] Storing OTP hash in database for ${email}...`);
     await prisma.emailOTP.create({
       data: {
         email,
@@ -51,11 +58,19 @@ export async function POST(req: NextRequest) {
     });
 
     // Send Email
+    console.log(`[Signup Phase 1] Invoking sendOTPEmail for ${email}...`);
     const emailResult = await sendOTPEmail(email, generatedOtp, "signup");
+    
     if (!emailResult.success) {
-      return NextResponse.json({ error: "Failed to send OTP email. Please try again." }, { status: 500 });
+      console.error(`[Signup Phase 1] Email delivery failed for ${email}:`, emailResult.error);
+      // Return the specific error from Resend to the frontend for debugging if needed
+      return NextResponse.json({ 
+        error: "Failed to send OTP email. Please try again.", 
+        details: emailResult.error 
+      }, { status: 500 });
     }
 
+    console.log(`[Signup Phase 1] OTP successfully sent to ${email}`);
     return NextResponse.json({
       message: "Verification code sent to email.",
       email: email,

@@ -51,15 +51,25 @@ export async function sendOTPEmail(email: string, otp: string, purpose: "signup"
   }
 
   try {
-    const data = await resend.emails.send({
-      from: "CodeHub <noreply@codehub.dev>", // Requires verified domain on Resend
+    const fromAddress = process.env.RESEND_FROM_EMAIL || "CodeHub <onboarding@resend.dev>";
+    console.log(`[Email Service] Attempting to send ${purpose} OTP to ${email} from ${fromAddress}`);
+
+    const { data, error } = await resend.emails.send({
+      from: fromAddress,
       to: [email],
       subject: subject,
       html: html,
     });
+
+    if (error) {
+      console.error("[Email Service] Resend API Error:", error);
+      return { success: false, error };
+    }
+
+    console.log("[Email Service] Email sent successfully:", data);
     return { success: true, data };
   } catch (error) {
-    console.error("Failed to send email:", error);
+    console.error("[Email Service] Unexpected execution error:", error);
     return { success: false, error };
   }
 }

@@ -9,15 +9,19 @@ const JWT_SECRET = process.env.JWT_SECRET || "codehub_jwt_secret_cyber_security_
 
 export async function POST(req: NextRequest) {
   try {
+    console.log("[Signup Phase 2] Starting OTP verification process...");
     const ip = req.headers.get("x-forwarded-for") || "unknown";
     const isAllowed = await checkRateLimit(ip, "signup_verify", 10, 15);
     if (!isAllowed) {
+      console.warn(`[Signup Phase 2] Rate limit exceeded for IP: ${ip}`);
       return NextResponse.json({ error: "Too many verification attempts. Please try again later." }, { status: 429 });
     }
 
     const { name, email, password, userOtp } = await req.json();
+    console.log(`[Signup Phase 2] Verifying OTP for email: ${email}`);
 
     if (!name || !email || !password || !userOtp) {
+      console.warn("[Signup Phase 2] Missing required fields");
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -26,31 +30,37 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingUser) {
+      console.warn(`[Signup Phase 2] User already exists in DB: ${email}`);
       return NextResponse.json({ error: "User already registered." }, { status: 409 });
     }
 
     // Find latest valid OTP
+    console.log(`[Signup Phase 2] Fetching OTP record from DB for ${email}...`);
     const otpRecord = await prisma.emailOTP.findFirst({
       where: { email, purpose: "signup" },
       orderBy: { createdAt: 'desc' }
     });
 
     if (!otpRecord) {
+      console.warn(`[Signup Phase 2] No OTP record found for ${email}`);
       return NextResponse.json({ error: "No OTP found. Please request a new one." }, { status: 400 });
     }
 
     if (otpRecord.expiresAt < new Date()) {
+      console.warn(`[Signup Phase 2] OTP expired for ${email}`);
       return NextResponse.json({ error: "OTP has expired. Please request a new one." }, { status: 400 });
     }
 
     if (otpRecord.attempts >= 5) {
+      console.warn(`[Signup Phase 2] Max attempts reached for ${email}`);
       return NextResponse.json({ error: "Too many incorrect attempts. Please request a new OTP." }, { status: 400 });
     }
 
     // Verify OTP hash
+    console.log(`[Signup Phase 2] Validating OTP hash for ${email}...`);
     const isValid = await bcrypt.compare(userOtp.trim(), otpRecord.otpHash);
-    
     if (!isValid) {
+      console.warn(`[Signup Phase 2] Invalid OTP provided for ${email}`);
       await prisma.emailOTP.update({
         where: { id: otpRecord.id },
         data: { attempts: { increment: 1 } }
@@ -58,6 +68,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid OTP code." }, { status: 400 });
     }
 
+    console.log(`[Signup Phase 2] OTP is valid. Creating user account for ${email}...`);
+    
     // Hash user password
     const passwordHash = await bcrypt.hash(password, 10);
 
@@ -75,11 +87,12 @@ export async function POST(req: NextRequest) {
     });
 
     // Cleanup OTPs
+    console.log(`[Signup Phase 2] Cleaning up OTPs for ${email}...`);
     await prisma.emailOTP.deleteMany({
       where: { email, purpose: "signup" }
     });
 
-    // Create JWT token for persistent login
+    console.log(`[Signup Phase 2] User account created successfully. Issuing JWT...`);
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       JWT_SECRET,
